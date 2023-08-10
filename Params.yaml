@@ -1,0 +1,64 @@
+setting:
+  binWidth: 5
+  label: 1
+  interpolator: 'sitkBSpline' # This is an enumerated value, here None is not allowed
+  geometryTolerance: 1
+  # Normalization:
+  normalize: true
+  normalizeScale: 100
+  # 2D settings
+  # force2Ddimension setting is relative to the acquisition plane.
+  # For example, the axial plane (0) corresponds to the acquisition plane (axial, sagittal or coronal) of the MRI volume.
+  # Therefore, in most cases this setting should not be modified.
+  force2D: true
+  force2Ddimension: 0
+  # Resampling:
+  # Not enabled in this example. However, because texture calculation assumes isotropic spacing, a forced 2D extraction
+  # is used, therefore only requiring the voxels to be isotropic in-plane. Enable pre-cropping to reduce memory
+  # footprint and speed up applying the filters.
+  # preCrop: true
+  # first order specific settings:
+  # When normalizing, gray values below the mean will be negative. Shifting by 300 (3 StdDevs * 100) ensures that the
+  # majority of voxels is positive (only outliers >3 SD lower than the mean will be negative).
+  voxelArrayShift: 300
+  correctMask: True
+  
+
+# Image types to use: "Original" for unfiltered image, for possible filters, see documentation.
+imageType:
+  Original: {}
+  LoG:
+    sigma: [2.0, 3.0, 4.0, 5.0]
+  Wavelet: {}
+  Gradient: {}
+
+featureClass:
+  shape2D:
+  firstorder:
+  glcm:
+    - 'Autocorrelation'
+    - 'JointAverage'
+    - 'ClusterProminence'
+    - 'ClusterShade'
+    - 'ClusterTendency'
+    - 'Contrast'
+    - 'Correlation'
+    - 'DifferenceAverage'
+    - 'DifferenceEntropy'
+    - 'DifferenceVariance'
+    - 'JointEnergy'
+    - 'JointEntropy'
+    - 'Imc1'
+    - 'Imc2'
+    - 'Idm'
+    - 'Idmn'
+    - 'Id'
+    - 'Idn'
+    - 'InverseVariance'
+    - 'MaximumProbability'
+    - 'SumEntropy'
+    - 'SumSquares'
+  glrlm:
+  glszm:
+  gldm:
+  ngtdm:
