@@ -16,6 +16,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import seaborn as sns
 import matplotlib.pyplot as plt
+import xgboost as xgb
+
 
 from config import data_paths
     
@@ -169,9 +171,29 @@ def remove_corelation(data_path, save_path):
 
     # Save the processed dataframe to a new csv file
     df.to_csv(save_path, index=False)
-    
 
-def exhaustive_search(data_path, visualize=False):
+
+def remove_correlation_v2(data_path, save_path):
+    def correlation(dataset, threshold):
+        # with the following function we can select highly correlated features
+        # it will remove the first feature that is correlated with anything other feature
+        col_corr = set()  # Set of all the names of correlated columns
+        corr_matrix = dataset.corr()
+        for i in range(len(corr_matrix.columns)):
+            for j in range(i):
+                if abs(corr_matrix.iloc[i, j]) > threshold: # we are interested in absolute coeff value
+                    colname = corr_matrix.columns[i]  # getting the name of column
+                    col_corr.add(colname)
+        return col_corr
+    
+    df = pd.read_csv(data_path)
+    col_corr = correlation(df, 0.8)
+    df = df.drop(df[col_corr], axis=1)
+    print(f"after remove correlation, {df.shape} features remain")
+    df.to_csv(save_path, index=False)
+
+
+def feature_selection(data_path, visualize=False):
     """
     last step of feature selection
     """
@@ -188,8 +210,11 @@ def exhaustive_search(data_path, visualize=False):
 
     # Define the method
     # model = LogisticRegression(max_iter=10000)
-    model = svm.SVC(kernel='rbf', probability=True)
-    rfecv = RFECV(estimator=model, step=1, cv=5, scoring='roc_auc', n_jobs=-1, min_features_to_select = 2)
+    # model = svm.SVC(kernel='linear', probability=True)
+    model = xgb.XGBClassifier(objective='binary:logistic', n_estimators=100)
+    # rfecv = RFECV(estimator=model, step=1, cv=5, scoring='roc_auc', n_jobs=-1, min_features_to_select = 1)
+    rfecv = RFECV(estimator=model, step=1, cv=5, scoring='roc_auc', n_jobs=-1)
+
 
     # Fit the method to the data
     rfecv = rfecv.fit(X, y)
@@ -239,11 +264,12 @@ def check_error():
 
 
 if __name__ == '__main__':
-    extract_separate_T2()
     T2_path = "T2_features.csv"
     T2_save_path = "T2_features_processed.csv"
-    remove_corelation(T2_path, T2_save_path)
-    exhaustive_search(T2_save_path)
+    # extract_separate_T2()
+    # remove_corelation(T2_path, T2_save_path)
+    # remove_correlation_v2(T2_path, T2_save_path)
+    feature_selection(T2_save_path)
 
     # extract_separate_T1()
     

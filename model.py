@@ -19,8 +19,9 @@ def modeling():
     #                      'log-sigma-3-0-mm-3D_firstorder_Kurtosis', 'log-sigma-5-0-mm-3D_glrlm_LongRunHighGrayLevelEmphasis', 
     #                      'wavelet-H_firstorder_Kurtosis']
     # selected_features = ['diagnostics_Mask-original_VoxelNum', 'original_shape2D_Elongation', 'log-sigma-3-0-mm-3D_firstorder_Kurtosis', 'log-sigma-3-0-mm-3D_glrlm_RunLengthNonUniformity', 'log-sigma-5-0-mm-3D_glcm_Imc1', 'log-sigma-5-0-mm-3D_glrlm_LongRunHighGrayLevelEmphasis', 'wavelet-H_firstorder_Kurtosis', 'wavelet-H_glcm_ClusterShade']
-    selected_features = ['diagnostics_Image-original_Maximum', 'diagnostics_Mask-original_VoxelNum', 'original_shape2D_Elongation', 
-                         'log-sigma-2-0-mm-3D_ngtdm_Contrast', 'log-sigma-5-0-mm-3D_glrlm_LongRunHighGrayLevelEmphasis']
+    # selected_features = ['diagnostics_Image-original_Maximum', 'diagnostics_Mask-original_VoxelNum', 'original_shape2D_Elongation', 
+    #                      'log-sigma-2-0-mm-3D_ngtdm_Contrast', 'log-sigma-5-0-mm-3D_glrlm_LongRunHighGrayLevelEmphasis']
+    selected_features = ['diagnostics_Mask-original_VoxelNum', 'log-sigma-2-0-mm-3D_glcm_Imc1', 'log-sigma-2-0-mm-3D_ngtdm_Contrast']
     # Separate the features from the target and focus only on selected features
     X = df[selected_features].values
     y = df['label'].values  # assuming the target is in 'label' column
@@ -30,7 +31,7 @@ def modeling():
     # y = df['label']
 
     # Split the data into training and validation sets
-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=50)
     
     print(f"Length of X train {len(X_train)}")
     print(f"Length of X train {len(X_val)}")
