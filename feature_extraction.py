@@ -22,132 +22,84 @@ import xgboost as xgb
 from config import data_paths
     
     
-def extract_separate_T2(treatment_outcome=False):
+def extract_features(modality="T2", treatment_outcome=False, data_paths=[]):
     """
-    To Do:
-    1. Considering the influence of number of slices: only choose mask != 0 and generate more?
-       2D: only one, like [160, 160, 1] -> Yes, only consider 2D now
-    Params:
-    treatment_outcome: treat vs untreat (False), 4 groups (True)
+    Extracts radiomic features from MRI data.
 
+    Parameters:
+        - modality: 'T1' or 'T2'
+        - treatment_outcome: If False, assigns labels based on treated vs untreated. 
+                             If True, assigns labels based on treatment type.
+        - data_paths: List of paths containing the MRI data
     """
+
     params = 'Params.yaml'
     extractor = featureextractor.RadiomicsFeatureExtractor(params)
+
     start_time = time.time()
     count = 0
     errors = 0
-    features = pd.DataFrame()
+    features_df = pd.DataFrame()
+
     for data_path in tqdm(data_paths):
         for i in range(2):
-            if not glob.glob(os.path.join(data_path, f"T2W_HR_Separate_{i}.nii.gz")):
+            image_path = glob.glob(os.path.join(data_path, f"{modality}W_HR_Separate_{i}.nii.gz"))
+            mask_path = glob.glob(os.path.join(data_path, f"MASK_{i}.nii.gz"))
+
+            if not image_path:
                 break
-            T2W_HR_path = glob.glob(os.path.join(data_path, f"T2W_HR_Separate_{i}.nii.gz"))[0]
-            Mask_path = glob.glob(os.path.join(data_path, f"MASK_{i}.nii.gz"))[0]
+
             try:
-                result = extractor.execute(T2W_HR_path, Mask_path)
+                result = extractor.execute(image_path[0], mask_path[0])
                 feature = pd.DataFrame([result])
-                # create label for treat vs. untreated or treatment outcome
+
+                # Assign labels
                 if treatment_outcome:
-                    if 'Control' in T2W_HR_path:
-                        feature.insert(0, 'label', 0)
-                    elif 'NK' in T2W_HR_path:
-                        feature.insert(0, 'label', 1)
-                    elif 'Sorafenib' in T2W_HR_path:
-                        feature.insert(0, 'label', 2)
-                    else:
-                        feature.insert(0, 'label', 3)
+                    treatment_labels = {'Control': 0, 'NK': 1, 'Sorafenib': 2}
+                    label = treatment_labels.get(next(filter(lambda x: x in image_path[0], treatment_labels)), 3)
                 else:
-                    if 'Control' in T2W_HR_path:
-                        feature.insert(0, 'label', 0)
-                    else:
-                        feature.insert(0, 'label', 1)
-                features = pd.concat([features, feature])
+                    label = 0 if 'Control' in image_path[0] else 1
+
+                feature.insert(0, 'label', label)
+                features_df = pd.concat([features_df, feature])
+
             except Exception as error:
                 print("Exception occurs: ", error)
-                print("error path: ", data_path)
+                print("Error path: ", data_path)
                 errors += 1
                 continue
-            feature_size = len(result)
+
             count += 1
-            # for key, val in six.iteritems(result):
-            #     pass
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    print(f"Elapsed time: {elapsed_time:.6f} seconds")
-    print("feature size: ", feature_size)
-    print("sample size: ", count)
-    print("error size: ", errors)
-    features = features.dropna(axis=1)
-    # drop non-numeric columns if cannot transform to float64
-    columns = features.columns
-    features_numeric =  pd.DataFrame()
-    for col in columns:
-        try:
-            df=features[col].astype(np.float64)
-            features_numeric = pd.concat([features_numeric, df], axis=1)
-        except:
-            pass
-        continue
-    print("features shape: ", features_numeric.shape)
-    features_numeric.to_csv("T2_features.csv", index=False)
+
+    elapsed_time = time.time() - start_time
+
+    print_stats(elapsed_time, len(result), count, errors)
+
+    filename = ""
+    if treatment_outcome:
+        filename = f"{modality}_outcome_features.csv"
+        save_features(features_df, filename)
+    else:
+        filename = f"{modality}_treatment_features.csv"
+        save_features(features_df, filename)
+    return filename
 
 
-def extract_separate_T1():
-    """
-    To Do:
-    1. Considering the influence of number of slices: only choose mask != 0 and generate more?
-       2D: only one, like [160, 160, 1] -> Yes, only consider 2D now
-    """
-    params = 'Params.yaml'
-    extractor = featureextractor.RadiomicsFeatureExtractor(params)
-    start_time = time.time()
-    count = 0
-    errors = 0
-    features = pd.DataFrame()
-    for data_path in tqdm(data_paths):
-        for i in range(2):
-            if not glob.glob(os.path.join(data_path, f"T1W_HR_Separate_{i}.nii.gz")):
-                break
-            T1W_HR_path = glob.glob(os.path.join(data_path, f"T1W_HR_Separate_{i}.nii.gz"))[0]
-            Mask_path = glob.glob(os.path.join(data_path, f"MASK_{i}.nii.gz"))[0]
-            try:
-                result = extractor.execute(T1W_HR_path, Mask_path)
-                feature = pd.DataFrame([result])
-                # create label for treat vs. untreated
-                if 'Control' in T1W_HR_path:
-                    feature.insert(0, 'label', 0)
-                else:
-                    feature.insert(0, 'label', 1)
-                features = pd.concat([features, feature])
-            except Exception as error:
-                print("Exception occurs: ", error)
-                print("error path: ", data_path)
-                errors += 1
-                continue
-            feature_size = len(result)
-            count += 1
-            # for key, val in six.iteritems(result):
-            #     pass
-    end_time = time.time()
-    elapsed_time = end_time - start_time
+def print_stats(elapsed_time, feature_size, count, errors):
     print(f"Elapsed time: {elapsed_time:.6f} seconds")
-    print("feature size: ", feature_size)
-    print("sample size: ", count)
-    print("error size: ", errors)
-    features = features.dropna(axis=1)
-    # drop non-numeric columns if cannot transform to float64
-    columns = features.columns
-    features_numeric =  pd.DataFrame()
-    for col in columns:
-        try:
-            df=features[col].astype(np.float64)
-            features_numeric = pd.concat([features_numeric, df], axis=1)
-        except:
-            pass
-        continue
-    print("features shape: ", features_numeric.shape)
-    features_numeric.to_csv("T1_features.csv", index=False)
-    
+    print("Feature size: ", feature_size)
+    print("Sample size: ", count)
+    print("Error size: ", errors)
+
+
+def save_features(features, filename):
+    features.dropna(axis=1, inplace=True)
+    features_numeric = features.apply(pd.to_numeric, errors='coerce')
+    features_numeric.dropna(axis=1, inplace=True)
+    print("Features shape: ", features_numeric.shape)
+    features_numeric.to_csv(filename, index=False)
+
+
 
 def remove_corelation(data_path, save_path):
     """
@@ -170,26 +122,6 @@ def remove_corelation(data_path, save_path):
     print(f"after remove correlation, {df.shape} features remain")
 
     # Save the processed dataframe to a new csv file
-    df.to_csv(save_path, index=False)
-
-
-def remove_correlation_v2(data_path, save_path):
-    def correlation(dataset, threshold):
-        # with the following function we can select highly correlated features
-        # it will remove the first feature that is correlated with anything other feature
-        col_corr = set()  # Set of all the names of correlated columns
-        corr_matrix = dataset.corr()
-        for i in range(len(corr_matrix.columns)):
-            for j in range(i):
-                if abs(corr_matrix.iloc[i, j]) > threshold: # we are interested in absolute coeff value
-                    colname = corr_matrix.columns[i]  # getting the name of column
-                    col_corr.add(colname)
-        return col_corr
-    
-    df = pd.read_csv(data_path)
-    col_corr = correlation(df, 0.8)
-    df = df.drop(df[col_corr], axis=1)
-    print(f"after remove correlation, {df.shape} features remain")
     df.to_csv(save_path, index=False)
 
 
@@ -221,7 +153,7 @@ def feature_selection(data_path, visualize=False):
 
     # Get selected features
     selected_features = list(df.columns[1:][rfecv.support_])
-
+    print("Data Path: ", data_path)
     print('Number of selected features: ', len(selected_features))
     print('Selected features: ', selected_features)
     
@@ -257,22 +189,47 @@ def check_error():
     mask_data = nib.load(mask_path).get_fdata()
     print("MRI dimension: ", mri_data.shape)
     print("mask dimension: ", mask_data.shape)
-    
+
+
+def merge_features(data_path_1, data_path_2, save_path):
+    # Read the two feature files
+    t1_features = pd.read_csv(data_path_1)
+    t2_features = pd.read_csv(data_path_2)
+
+    # Ensure the rows of the two dataframes match up. 
+    # This assumes that the rows are in the same order and the dataframes have the same length.
+    # If they have an ID or some unique identifier, you should use that for merging instead.
+
+    if len(t1_features) != len(t2_features):
+        raise ValueError("The two CSVs have a different number of rows!")
+
+    # Merge the two dataframes horizontally
+    # This will create a dataframe with columns from both original dataframes side by side
+    merged_features = pd.concat([t1_features, t2_features], axis=1)
+
+    # Optionally, if you have some column like 'ID' which repeats in both files, you can drop one of them
+    # merged_features = merged_features.loc[:,~merged_features.columns.duplicated()]
+
+    # Save the merged features to a new CSV
+    merged_features.to_csv(save_path, index=False)
+
+
 
 # def process_pipeline():
 #     remove_corelation()
 
 
 if __name__ == '__main__':
-    T2_path = "T2_features.csv"
-    T2_save_path = "T2_features_processed.csv"
-    # extract_separate_T2()
-    # remove_corelation(T2_path, T2_save_path)
-    # remove_correlation_v2(T2_path, T2_save_path)
-    feature_selection(T2_save_path)
-
-    # extract_separate_T1()
-    
-    # extract_T2_all()
-    # extract_T1_all()
-    # check_error()
+    # generate raw features
+    T1_outcome = extract_features(modality="T1", data_paths=data_paths, treatment_outcome=True)
+    T1_treatment = extract_features(modality="T1", data_paths=data_paths, treatment_outcome=False)
+    T2_outcome = extract_features(modality="T2", data_paths=data_paths, treatment_outcome=True)
+    T2_treatment = extract_features(modality="T2", data_paths=data_paths, treatment_outcome=False)
+    T1_T2_outcome = merge_features(T1_outcome, T2_outcome, "T1_T2_outcome.csv")
+    T1_T2_treatment = merge_features(T1_treatment, T2_treatment, "T1_T2_treatment.csv")
+    # remove correlation
+    for path in glob.glob("*.csv"):
+        remove_corelation(path, path.replace(".csv", "_processed.csv"))
+    ## feature selection
+    for path in glob.glob("*_processed.csv"):
+        feature_selection(path)
