@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 import xgboost as xgb
 
 
-from config import data_paths
+from config import data_paths, treatment_path
     
     
 def extract_features(modality="T2", treatment_outcome=False, data_paths=[]):
@@ -55,7 +55,7 @@ def extract_features(modality="T2", treatment_outcome=False, data_paths=[]):
 
                 # Assign labels
                 if treatment_outcome:
-                    treatment_labels = {'Control': 0, 'NK': 1, 'Sorafenib': 2}
+                    treatment_labels = {'Control': 0, 'NK': 1, 'Sorafenib': 2, 'Combination': 3}
                     label = treatment_labels.get(next(filter(lambda x: x in image_path[0], treatment_labels)), 3)
                 else:
                     label = 0 if 'Control' in image_path[0] else 1
@@ -143,7 +143,10 @@ def feature_selection(data_path, visualize=False):
     # Define the method
     # model = LogisticRegression(max_iter=10000)
     # model = svm.SVC(kernel='linear', probability=True)
-    model = xgb.XGBClassifier(objective='multi:softmax', n_estimators=100)
+    if "outcome" in data_path:
+        model = xgb.XGBClassifier(objective='multi:softprob', num_class=4, n_estimators=100)
+    else:
+        model = xgb.XGBClassifier(n_estimators=100)
     # rfecv = RFECV(estimator=model, step=1, cv=5, scoring='roc_auc', n_jobs=-1, min_features_to_select = 1)
     rfecv = RFECV(estimator=model, step=1, cv=5, scoring='roc_auc', n_jobs=-1)
 
@@ -156,6 +159,7 @@ def feature_selection(data_path, visualize=False):
     print("Data Path: ", data_path)
     print('Number of selected features: ', len(selected_features))
     print('Selected features: ', selected_features)
+    print("----------------------------------------------------")
     
     
     # assuming df is your DataFrame and it's already loaded
@@ -220,7 +224,7 @@ def merge_features(data_path_1, data_path_2, save_path):
 
 
 if __name__ == '__main__':
-    # generate raw features
+    # # generate raw features
     # T1_outcome = extract_features(modality="T1", data_paths=data_paths, treatment_outcome=True)
     # T1_treatment = extract_features(modality="T1", data_paths=data_paths, treatment_outcome=False)
     # T2_outcome = extract_features(modality="T2", data_paths=data_paths, treatment_outcome=True)
@@ -230,6 +234,6 @@ if __name__ == '__main__':
     # # remove correlation
     # for path in glob.glob("*.csv"):
     #     remove_corelation(path, path.replace(".csv", "_processed.csv"))
-    ## feature selection
-    for path in glob.glob("*_processed.csv"):
+    # feature selection
+    for path in treatment_path:
         feature_selection(path)

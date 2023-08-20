@@ -8,20 +8,15 @@ import matplotlib.pyplot as plt
 from sklearn import preprocessing
 from imblearn.over_sampling import SMOTE
 import xgboost as xgb
+import glob
+
+from config import treatment_path
 
 
-def modeling():
+def modeling(data_path, selected_features):
     # Load data
-    df = pd.read_csv('T2_features_processed.csv')
+    df = pd.read_csv(data_path)
     
-    # specify your selected features
-    # selected_features = ['diagnostics_Mask-original_VoxelNum', 'original_shape2D_Elongation', 
-    #                      'log-sigma-3-0-mm-3D_firstorder_Kurtosis', 'log-sigma-5-0-mm-3D_glrlm_LongRunHighGrayLevelEmphasis', 
-    #                      'wavelet-H_firstorder_Kurtosis']
-    # selected_features = ['diagnostics_Mask-original_VoxelNum', 'original_shape2D_Elongation', 'log-sigma-3-0-mm-3D_firstorder_Kurtosis', 'log-sigma-3-0-mm-3D_glrlm_RunLengthNonUniformity', 'log-sigma-5-0-mm-3D_glcm_Imc1', 'log-sigma-5-0-mm-3D_glrlm_LongRunHighGrayLevelEmphasis', 'wavelet-H_firstorder_Kurtosis', 'wavelet-H_glcm_ClusterShade']
-    # selected_features = ['diagnostics_Image-original_Maximum', 'diagnostics_Mask-original_VoxelNum', 'original_shape2D_Elongation', 
-    #                      'log-sigma-2-0-mm-3D_ngtdm_Contrast', 'log-sigma-5-0-mm-3D_glrlm_LongRunHighGrayLevelEmphasis']
-    selected_features = ['diagnostics_Mask-original_VoxelNum', 'log-sigma-2-0-mm-3D_glcm_Imc1', 'log-sigma-2-0-mm-3D_ngtdm_Contrast']
     # Separate the features from the target and focus only on selected features
     X = df[selected_features].values
     y = df['label'].values  # assuming the target is in 'label' column
@@ -137,4 +132,7 @@ def plot_weight(clf, feature_names):
     
     
 if __name__ == '__main__':
-    modeling()
+    # treatment
+    modeling("T1_T2_treatment_processed.csv", 
+             ['diagnostics_Image-original_Mean', 'diagnostics_Mask-original_VoxelNum', 'original_shape2D_Elongation', 'original_shape2D_Sphericity', 'log-sigma-2-0-mm-3D_firstorder_Kurtosis', 'log-sigma-2-0-mm-3D_ngtdm_Busyness', 'log-sigma-3-0-mm-3D_glrlm_ShortRunLowGrayLevelEmphasis', 'log-sigma-4-0-mm-3D_glrlm_ShortRunLowGrayLevelEmphasis', 'log-sigma-5-0-mm-3D_glcm_Contrast', 'log-sigma-5-0-mm-3D_glrlm_ShortRunLowGrayLevelEmphasis', 'log-sigma-2-0-mm-3D_glcm_Imc1.1', 'log-sigma-2-0-mm-3D_ngtdm_Contrast.1', 'wavelet-H_firstorder_Mean.1'])
+    
