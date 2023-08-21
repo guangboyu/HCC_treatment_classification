@@ -133,6 +133,5 @@ def plot_weight(clf, feature_names):
     
 if __name__ == '__main__':
     # treatment
-    modeling("T1_T2_treatment_processed.csv", 
-             ['diagnostics_Image-original_Mean', 'diagnostics_Mask-original_VoxelNum', 'original_shape2D_Elongation', 'original_shape2D_Sphericity', 'log-sigma-2-0-mm-3D_firstorder_Kurtosis', 'log-sigma-2-0-mm-3D_ngtdm_Busyness', 'log-sigma-3-0-mm-3D_glrlm_ShortRunLowGrayLevelEmphasis', 'log-sigma-4-0-mm-3D_glrlm_ShortRunLowGrayLevelEmphasis', 'log-sigma-5-0-mm-3D_glcm_Contrast', 'log-sigma-5-0-mm-3D_glrlm_ShortRunLowGrayLevelEmphasis', 'log-sigma-2-0-mm-3D_glcm_Imc1.1', 'log-sigma-2-0-mm-3D_ngtdm_Contrast.1', 'wavelet-H_firstorder_Mean.1'])
-    
+    modeling("T1_treatment_features_processed.csv",
+             ['diagnostics_Mask-original_VoxelNum', 'log-sigma-2-0-mm-3D_firstorder_Kurtosis', 'log-sigma-2-0-mm-3D_glcm_Contrast'])    

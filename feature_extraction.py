@@ -11,12 +11,16 @@ import pandas as pd
 import numpy as np
 from sklearn.feature_selection import RFECV
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn import svm
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+from sklearn.linear_model import Lasso
 import seaborn as sns
 import matplotlib.pyplot as plt
 import xgboost as xgb
+from yellowbrick.model_selection import RFECV as RFECV_yellow
+from yellowbrick.model_selection import FeatureImportances
 
 
 from config import data_paths, treatment_path
@@ -181,7 +185,54 @@ def feature_selection(data_path, visualize=False):
     # sns.clustermap(corr, mask=mask, cmap=cmap, center=0, linewidths=.5, cbar_kws={"shrink": .5})
     # plt.title('Clustered correlation heatmap of the features')
     # plt.show()
-            
+
+
+def feature_selection_visualization(data_path):
+    """
+    last step of feature selection
+    """
+    # Load the data
+    df = pd.read_csv(data_path)
+
+    # Separate features and target
+    X = df.drop('label', axis=1) 
+    y = df['label']
+
+    # Scaling the features
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X)
+
+    print(f"Data path is {data_path}")
+    visualizer = RFECV_yellow(svm.SVC(kernel='linear', C=1, probability=True), 
+                              scoring='roc_auc', n_jobs=-1, cv=5)
+    visualizer.fit(X, y)
+    visualizer.show()
+
+    # Get selected features
+    selected_features = list(df.columns[1:][visualizer.support_])
+    print("Data Path: ", data_path)
+    print('Number of selected features: ', len(selected_features))
+    print('Selected features: ', selected_features)
+    print("----------------------------------------------------") 
+    return selected_features
+
+
+def feature_importance(data_path, selected_features):
+    # Load the data
+    df = pd.read_csv(data_path)
+
+    # Separate features and target
+    X = df[selected_features].values
+    y = df['label'].values  # assuming the target is in 'label' column
+
+    # Scaling the features
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X)
+
+    model = RandomForestClassifier(n_estimators=10)
+    viz = FeatureImportances(model, labels=selected_features)
+    viz.fit(X, y)
+    viz.show()
 
 
 def check_error():
@@ -236,4 +287,6 @@ if __name__ == '__main__':
     #     remove_corelation(path, path.replace(".csv", "_processed.csv"))
     # feature selection
     for path in treatment_path:
-        feature_selection(path)
+        # feature_selection(path)
+        selected_features = feature_selection_visualization(path)
+        feature_importance(path, selected_features)
