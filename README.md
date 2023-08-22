@@ -14,6 +14,8 @@ Build machine learning models to predict treatment outcomes:
 
 `feature_extraction.py`: feature extraction and selection
 
-`model.py`: machine learning model training, evaluation
+`model.py`: machine learning model training, evaluation (old)
+
+`modeling.py`: machine learning model training, evaluation (new)
 
 `Params.yaml`: parameters for PyRadiomics features
