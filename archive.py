@@ -258,3 +258,72 @@ def remove_correlation_v2(data_path, save_path):
     df = df.drop(df[col_corr], axis=1)
     print(f"after remove correlation, {df.shape} features remain")
     df.to_csv(save_path, index=False)
+
+
+def plot_roc_curves(metrics_dict, title):
+    plt.figure(figsize=(10, 8))
+    for model_name, metrics in metrics_dict.items():
+        plt.plot(
+            metrics["fpr"],
+            metrics["tpr"],
+            lw=2,
+            label=f'{model_name.upper()} ROC curve (area = {metrics["auc"]:.2f})',
+        )
+    plt.plot([0, 1], [0, 1], color="red", lw=2, linestyle="--")
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title(title)
+    plt.legend(loc="lower right")
+    plt.show()
+
+
+def cross_validate(models, X, y, n_splits=5, 
+                   StratifiedK=True, smote=False):
+    if StratifiedK:
+        cv = StratifiedKFold(n_splits=5)
+    else:
+        cv = KFold(n_splits=n_splits)
+    # nested dict: [model_name][metric_name]
+    overall_metrics = {name: {"fpr": [], "tpr": [], "auc": [], "accuracy": []} for name in models}
+    avg_metrics = {name: {"fpr": [], "tpr": [], "auc": 0, "accuracy": 0} for name in models}
+
+    for train_idx, val_idx in cv.split(X, y):
+        X_train, X_val = X[train_idx], X[val_idx]
+        y_train, y_val = y[train_idx], y[val_idx]
+
+        # Scaling (normalization)
+        scaler = StandardScaler().fit(X_train)
+        X_train = scaler.transform(X_train)
+        X_val = scaler.transform(X_val)
+
+        # Apply SMOTE to the training data (for imblanced data)
+        if smote:
+            smote = SMOTE(random_state=42)
+            X_train, y_train = smote.fit_resample(X_train, y_train)
+
+        # trained_models = train_models(models, X_train, y_train)
+
+        for name, model in models.items():
+            model.fit(X_train, y_train)
+            metrics = evaluate(model, X_val, y_val)
+            overall_metrics[name]["auc"].append(metrics["auc"])
+            overall_metrics[name]["fpr"].append(metrics["fpr"])
+            print(f"{name} fpr:", metrics["fpr"])
+            overall_metrics[name]["tpr"].append(metrics["tpr"])
+            overall_metrics[name]["accuracy"].append(metrics["accuracy"])
+        print("-----------")
+
+    for name, metrics in overall_metrics.items():
+        avg_metrics[name]["auc"] = sum(metrics["auc"]) / len(metrics["auc"])
+        avg_metrics[name]["fpr"] = np.mean(metrics["fpr"])
+        avg_metrics[name]["tpr"] = np.mean(metrics["tpr"])
+        avg_metrics[name]["accuracy"] = sum(metrics["accuracy"]) / len(metrics["accuracy"])
+        avg_auc = avg_metrics[name]["auc"]
+        avg_acc = avg_metrics[name]["accuracy"]
+        print(f"Average AUC for {name.upper()}: {avg_auc:.4f}")
+        print(f"Average Accuracy for {name.upper()}: {avg_acc:.4f}")
+        print("-----------------------")
+
+    return overall_metrics

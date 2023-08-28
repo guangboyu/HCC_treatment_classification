@@ -104,7 +104,12 @@ def save_features(features, filename):
     features_numeric.to_csv(filename, index=False)
 
 
-
+def remove_features(data_path, features_to_exclude):
+    df = pd.read_csv(data_path)
+    df = df[df.columns[~df.columns.str.contains('|'.join(features_to_exclude))]]
+    df.to_csv(data_path, index=False)
+    return df
+    
 def remove_corelation(data_path, save_path):
     """
     remove features with high correlation
@@ -275,16 +280,18 @@ def merge_features(data_path_1, data_path_2, save_path):
 
 
 if __name__ == '__main__':
-    # generate raw features
-    T1_outcome = extract_features(modality="T1", data_paths=data_paths, treatment_outcome=True)
-    T1_treatment = extract_features(modality="T1", data_paths=data_paths, treatment_outcome=False)
-    T2_outcome = extract_features(modality="T2", data_paths=data_paths, treatment_outcome=True)
-    T2_treatment = extract_features(modality="T2", data_paths=data_paths, treatment_outcome=False)
-    T1_T2_outcome = merge_features(T1_outcome, T2_outcome, "T1_T2_outcome.csv")
-    T1_T2_treatment = merge_features(T1_treatment, T2_treatment, "T1_T2_treatment.csv")
-    # remove correlation
-    for path in glob.glob("*.csv"):
-        remove_corelation(path, path.replace(".csv", "_processed.csv"))
+    # # generate raw features
+    # T1_outcome = extract_features(modality="T1", data_paths=data_paths, treatment_outcome=True)
+    # T1_treatment = extract_features(modality="T1", data_paths=data_paths, treatment_outcome=False)
+    # T2_outcome = extract_features(modality="T2", data_paths=data_paths, treatment_outcome=True)
+    # T2_treatment = extract_features(modality="T2", data_paths=data_paths, treatment_outcome=False)
+    # T1_T2_outcome = merge_features(T1_outcome, T2_outcome, "T1_T2_outcome.csv")
+    # T1_T2_treatment = merge_features(T1_treatment, T2_treatment, "T1_T2_treatment.csv")
+    # # remove correlation
+    # for path in glob.glob("*.csv"):
+    #     features_to_exclude = ["VoxelNum"]
+    #     remove_features(path, features_to_exclude=features_to_exclude)
+    #     remove_corelation(path, path.replace(".csv", "_processed.csv"))
     # feature selection
     for path in treatment_path:
         # feature_selection(path)
