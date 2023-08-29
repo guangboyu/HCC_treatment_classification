@@ -8,14 +8,14 @@ Build machine learning models to predict treatment outcomes:
     * Combination
 
 ## Project Structure
-`data_preprocess.py` -> `feature_extraction.py` -> `model.py`
+`mri_preprocess.py` -> `feature_extraction.py` -> `modeling.py`
 
 `data_preprocess.py`: preprocess the data
 
 `feature_extraction.py`: feature extraction and selection
 
-`model.py`: machine learning model training, evaluation (old)
-
 `modeling.py`: machine learning model training, evaluation (new)
 
 `Params.yaml`: parameters for PyRadiomics features
+
+## Progress
