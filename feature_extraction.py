@@ -16,6 +16,7 @@ from sklearn import svm
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Lasso
+from sklearn.multiclass import OneVsRestClassifier
 import seaborn as sns
 import matplotlib.pyplot as plt
 import xgboost as xgb
@@ -23,7 +24,7 @@ from yellowbrick.model_selection import RFECV as RFECV_yellow
 from yellowbrick.model_selection import FeatureImportances
 
 
-from config import data_paths, treatment_path
+from config import data_paths, treatment_path, outcome_path
     
     
 def extract_features(modality="T2", treatment_outcome=False, data_paths=[]):
@@ -208,7 +209,11 @@ def feature_selection_visualization(data_path):
     X = scaler.fit_transform(X)
 
     print(f"Data path is {data_path}")
-    visualizer = RFECV_yellow(svm.SVC(kernel='linear', C=1, probability=True), 
+    if "outcome" in data_path:
+        visualizer = RFECV_yellow(estimator=svm.SVC(kernel='linear', C=1, probability=True), 
+                                  scoring='f1_micro', n_jobs=-1, cv=5)
+    else:
+        visualizer = RFECV_yellow(svm.SVC(kernel='linear', C=1, probability=True), 
                               scoring='roc_auc', n_jobs=-1, cv=5)
     visualizer.fit(X, y)
     visualizer.show()
@@ -293,7 +298,7 @@ if __name__ == '__main__':
     #     remove_features(path, features_to_exclude=features_to_exclude)
     #     remove_corelation(path, path.replace(".csv", "_processed.csv"))
     # feature selection
-    for path in treatment_path:
+    for path in outcome_path:
         # feature_selection(path)
         selected_features = feature_selection_visualization(path)
         feature_importance(path, selected_features)
