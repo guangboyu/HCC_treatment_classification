@@ -17,6 +17,7 @@ import xgboost as xgb
 
 from config import num_classes
 
+
 def load_data(data_path, features):
     df = pd.read_csv(data_path)
     X = df[features].values
@@ -106,12 +107,19 @@ def cross_validation_roc(
 
 
 if __name__ == "__main__":
-    features = [
+    T1_features = ["log-sigma-2-0-mm-3D_firstorder_Kurtosis"]
+    T2_features = [
+        "original_shape2D_Elongation",
+        "original_shape2D_MajorAxisLength",
+        "original_firstorder_Kurtosis",
+        "log-sigma-2-0-mm-3D_ngtdm_Contrast",
+        "wavelet-H_firstorder_Kurtosis",
+    ]
+    T1_T2_features = [
         # "diagnostics_Mask-original_VoxelNum",
         "log-sigma-2-0-mm-3D_firstorder_Kurtosis",
         "log-sigma-2-0-mm-3D_ngtdm_Contrast.1",
     ]
-    X, y = load_data("T1_T2_treatment_processed.csv", features)
 
     models = {
         "svm": svm.SVC(kernel="rbf", probability=True),
@@ -123,9 +131,9 @@ if __name__ == "__main__":
             solver="lbfgs", alpha=1e-5, hidden_layer_sizes=(5, 5), random_state=1
         ),
     }
-    
-    multi_class_models = {
-        "svm": OneVsRestClassifier(svm.SVC(kernel='rbf', probability=True))
-    }
 
+    multi_class_models = {
+        "svm": OneVsRestClassifier(svm.SVC(kernel="rbf", probability=True))
+    }
+    X, y = load_data("T1_T2_treatment_processed.csv", T2_features)
     cross_validation_roc(models, X, y, StratifiedK=True, smote=True, norm=False)
