@@ -14,7 +14,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import svm
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.linear_model import Lasso
 from sklearn.multiclass import OneVsRestClassifier
 import seaborn as sns
@@ -25,6 +25,7 @@ from yellowbrick.model_selection import FeatureImportances
 
 
 from config import data_paths, treatment_path, outcome_path
+from utils import get_last_part
     
     
 def extract_features(modality="T2", treatment_outcome=False, data_paths=[]):
@@ -82,10 +83,10 @@ def extract_features(modality="T2", treatment_outcome=False, data_paths=[]):
 
     filename = ""
     if treatment_outcome:
-        filename = f"{modality}_outcome_features.csv"
+        filename = f"{modality}_outcome.csv"
         save_features(features_df, filename)
     else:
-        filename = f"{modality}_treatment_features.csv"
+        filename = f"{modality}_treatment.csv"
         save_features(features_df, filename)
     return filename
 
@@ -101,7 +102,7 @@ def save_features(features, filename):
     features.dropna(axis=1, inplace=True)
     features_numeric = features.apply(pd.to_numeric, errors='coerce')
     features_numeric.dropna(axis=1, inplace=True)
-    print("Features shape: ", features_numeric.shape)
+    print("After romoving non-numerical value, features shape: ", features_numeric.shape)
     features_numeric.to_csv(filename, index=False)
 
 
@@ -116,6 +117,7 @@ def remove_corelation(data_path, save_path):
     remove features with high correlation
     r = 0.8
     """
+    print("Removing correlation for: ", data_path)
     df = pd.read_csv(data_path)
     # Create correlation matrix
     corr_matrix = df.corr().abs()
@@ -210,8 +212,10 @@ def feature_selection_visualization(data_path):
 
     print(f"Data path is {data_path}")
     if "outcome" in data_path:
-        visualizer = RFECV_yellow(estimator=svm.SVC(kernel='linear', C=1, probability=True), 
-                                  scoring='f1_micro', n_jobs=-1, cv=5)
+        # clf = svm.SVC(kernel='linear', C=1, probability=True)
+        clf = xgb.XGBClassifier(objective="binary:logistic", eval_metric="auc")
+        visualizer = RFECV_yellow(estimator= clf, 
+                                  scoring='roc_auc_ovr', n_jobs=-1, cv = StratifiedKFold(5))
     else:
         visualizer = RFECV_yellow(svm.SVC(kernel='linear', C=1, probability=True), 
                               scoring='roc_auc', n_jobs=-1, cv=5)
@@ -233,14 +237,17 @@ def feature_importance(data_path, selected_features):
 
     # Separate features and target
     X = df[selected_features].values
-    y = df['label'].values  # assuming the target is in 'label' column
+    y = df['label'].values  
 
+    # compact_features = [get_last_part(feature) for feature in selected_features]
+    
     # Scaling the features
     scaler = StandardScaler()
     X = scaler.fit_transform(X)
 
     model = RandomForestClassifier(n_estimators=10)
     viz = FeatureImportances(model, labels=selected_features)
+    # viz = FeatureImportances(model, labels=compact_features)
     viz.fit(X, y)
     viz.show()
 
@@ -279,26 +286,33 @@ def merge_features(data_path_1, data_path_2, save_path):
     merged_features.to_csv(save_path, index=False)
 
 
+def extract_remove():
+    """Step 1: Load, Extract MRI features, then remove correlation features
+    """
+    # generate raw features
+    T1_outcome = extract_features(modality="T1", data_paths=data_paths, treatment_outcome=True)
+    T1_treatment = extract_features(modality="T1", data_paths=data_paths, treatment_outcome=False)
+    T2_outcome = extract_features(modality="T2", data_paths=data_paths, treatment_outcome=True)
+    T2_treatment = extract_features(modality="T2", data_paths=data_paths, treatment_outcome=False)
+    T1_T2_outcome = merge_features(T1_outcome, T2_outcome, "T1_T2_outcome.csv")
+    T1_T2_treatment = merge_features(T1_treatment, T2_treatment, "T1_T2_treatment.csv")
+    # remove correlation
+    for path in glob.glob("*.csv"):
+        features_to_exclude = ["VoxelNum"]
+        remove_features(path, features_to_exclude=features_to_exclude)
+        remove_corelation(path, path.replace(".csv", "_processed.csv"))
 
-# def process_pipeline():
-#     remove_corelation()
 
-
-if __name__ == '__main__':
-    # # generate raw features
-    # T1_outcome = extract_features(modality="T1", data_paths=data_paths, treatment_outcome=True)
-    # T1_treatment = extract_features(modality="T1", data_paths=data_paths, treatment_outcome=False)
-    # T2_outcome = extract_features(modality="T2", data_paths=data_paths, treatment_outcome=True)
-    # T2_treatment = extract_features(modality="T2", data_paths=data_paths, treatment_outcome=False)
-    # T1_T2_outcome = merge_features(T1_outcome, T2_outcome, "T1_T2_outcome.csv")
-    # T1_T2_treatment = merge_features(T1_treatment, T2_treatment, "T1_T2_treatment.csv")
-    # # remove correlation
-    # for path in glob.glob("*.csv"):
-    #     features_to_exclude = ["VoxelNum"]
-    #     remove_features(path, features_to_exclude=features_to_exclude)
-    #     remove_corelation(path, path.replace(".csv", "_processed.csv"))
+def feature_selection():
+    """Step 2: Feature selection via algorithms
+    """
     # feature selection
     for path in outcome_path:
         # feature_selection(path)
         selected_features = feature_selection_visualization(path)
         feature_importance(path, selected_features)
+
+
+if __name__ == '__main__':
+    # extract_remove()
+    feature_selection()

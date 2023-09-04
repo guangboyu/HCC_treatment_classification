@@ -3,6 +3,14 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import collections
 import numpy as np
+from tqdm import tqdm
+from radiomics import featureextractor
+import glob
+import six
+import os
+
+from config import data_paths
+
 
 
 def features_heatmap(data_path):
@@ -64,6 +72,7 @@ def feature_count(data_path):
         data_path (_type_): feature csv path
     """
     df = pd.read_csv(data_path)
+    print("data fram shape: ", df.shape)
     feature_count = collections.defaultdict(int)
     for key in df.columns:
         try:
@@ -77,10 +86,44 @@ def feature_count(data_path):
         print(f"{feature_class}: {count} features")
         
 
+def radiomics_feature_check(data_path=data_paths, modality="T2"):
+    params = 'Params.yaml'
+    extractor = featureextractor.RadiomicsFeatureExtractor(params)
+    
+    for data_path in tqdm(data_paths):
+        for i in range(2):
+            image_path = glob.glob(os.path.join(data_path, f"{modality}W_HR_Separate_{i}.nii.gz"))
+            mask_path = glob.glob(os.path.join(data_path, f"MASK_{i}.nii.gz"))
+
+            if not image_path:
+                break
+
+            try:
+                result = extractor.execute(image_path[0], mask_path[0])
+                # Get the result
+                print('Result type:', type(result)) 
+                print('')
+                print('Calculated features')
+                for key, val in six.iteritems(result):
+                    print('\t', key, ':', val)
+                break
+            except Exception as error:
+                print("Exception occurs: ", error)
+                print("Error path: ", data_path)
+                errors += 1
+                continue
+        break
+
+
+    
+        
+
 if __name__ == '__main__':
-    data_path_raw = "T2_features.csv"
-    data_path = "T2_features_processed.csv"
-    features_heatmap(data_path_raw)
+    # data_path_raw = "T2_features.csv"
+    # data_path = "T2_features_processed.csv"
+    # features_heatmap(data_path_raw)
     # features_heatmap_3D(data_path)
     # feature_count(data_path_raw)
     # feature_count(data_path)
+    feature_count("T1_T2_outcome.csv")
+    # radiomics_feature_check()
