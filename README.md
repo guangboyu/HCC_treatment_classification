@@ -1,5 +1,7 @@
 ## Introduction
-Code implementatation for paper: [https://link.springer.com/article/10.1186/s12967-024-04873-w](url)
+Code implementatation for paper: [MRI radiomics to monitor therapeutic outcome of sorafenib plus IHA transcatheter NK cell combination therapy in hepatocellular carcinoma](https://link.springer.com/article/10.1186/s12967-024-04873-w)
+
+
 Build machine learning models to predict treatment outcomes:
 * treatment group vs. untreatment (control) group
 * treatment outcomes
